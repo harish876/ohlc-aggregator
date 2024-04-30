@@ -50,29 +50,34 @@ func Aggregate(queue *chan datamock.OHLC) {
 
 	go func() {
 		for currTime := range ticker.C {
+			_ = currTime
 			//Ticker Reset Details
 			durationUntilNextTick = clock.RoundToNearestMinute(time.Minute)
 			ticker.Reset(durationUntilNextTick)
 
+			start := time.Now()
 			ohlc.Mtx.Lock()
 			for key, value := range ohlc.ScriptMap {
+
 				//Reset the map
 				delete(ohlc.ScriptMap, key)
 
-				fmt.Println("------------------------- AGGREGATED DATA -------------------------------")
-				fmt.Println("Ticker Fired at", currTime)
-				if value.Prev != nil {
-					fmt.Printf("Timestamp for Previous Minute %v\n", value.Prev.Timestamp)
-					fmt.Printf("Open: %f High: %f Low: %f Close: %f\n", value.Prev.Data.Open, value.Prev.Data.High, value.Prev.Data.Low, value.Prev.Data.Close)
-				}
+				if key == 11536 {
+					fmt.Println("------------------------- AGGREGATED DATA -------------------------------")
+					if value.Prev != nil {
+						fmt.Printf("Timestamp for Previous Minute %v\n", value.Prev.Timestamp)
+						fmt.Printf("Open: %f High: %f Low: %f Close: %f\n", value.Prev.Data.Open, value.Prev.Data.High, value.Prev.Data.Low, value.Prev.Data.Close)
+					}
 
-				if value.Curr != nil {
-					fmt.Printf("Timestamp for Current Minute %v\n", value.Curr.Timestamp)
-					fmt.Printf("Open: %f High: %f Low: %f Close: %f\n", value.Curr.Data.Open, value.Curr.Data.High, value.Curr.Data.Low, value.Curr.Data.Close)
+					if value.Curr != nil {
+						fmt.Printf("Timestamp for Current Minute %v\n", value.Curr.Timestamp)
+						fmt.Printf("Open: %f High: %f Low: %f Close: %f\n", value.Curr.Data.Open, value.Curr.Data.High, value.Curr.Data.Low, value.Curr.Data.Close)
+					}
+					fmt.Println("--------------------------------------------------------------------------")
 				}
-				fmt.Println("--------------------------------------------------------------------------")
 			}
 			ohlc.Mtx.Unlock()
+			fmt.Println("Total Time Spent in Locked State", time.Since(start))
 		}
 	}()
 
@@ -83,6 +88,7 @@ func Aggregate(queue *chan datamock.OHLC) {
 		}
 	}
 	for msg := range *queue {
+		ohlc.Mtx.Lock()
 		currentServerMinute := clock.RoundTimeToPreviousMinute(time.Now())
 		currentLTTMinute := clock.RoundTimeToPreviousMinute(msg.LTT)
 		scriptId := msg.ScriptId
@@ -145,5 +151,7 @@ func Aggregate(queue *chan datamock.OHLC) {
 				ohlc.ScriptMap[scriptId].Prev = data
 			}
 		}
+		ohlc.Mtx.Unlock()
+
 	}
 }

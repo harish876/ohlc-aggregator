@@ -10,6 +10,7 @@ import (
 
 var (
 	QUEUE_SIZE = 1000000
+	SCRIPTS    = 1000000
 )
 
 type Data struct {
@@ -17,7 +18,6 @@ type Data struct {
 }
 
 func main() {
-	scriptIds := []int{11536}
 
 	eq := models.EventQueue{
 		Queue: make(chan datamock.OHLC, QUEUE_SIZE),
@@ -30,9 +30,10 @@ func main() {
 
 	go func() {
 		for currTime := range ticker.C {
-			for _, scriptId := range scriptIds {
-				ohlc := datamock.Seed(scriptId)
-				fmt.Printf("Ticker: %v , LTP: %f, LTT: %v\n", currTime, ohlc.LTP, ohlc.LTT)
+			_ = currTime
+			fmt.Printf("Ticker Fired: %v\n", currTime)
+			for i := 0; i < SCRIPTS; i++ {
+				ohlc := datamock.Seed(i + 1)
 				eq.Queue <- ohlc
 			}
 		}
